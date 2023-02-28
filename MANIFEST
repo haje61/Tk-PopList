@@ -1,6 +1,7 @@
 Changes
+lib/Tk/PopList.pm
+LICENSE
 Makefile.PL
 MANIFEST
-README
+README.md
 t/Tk-PopList.t
-lib/Tk/PopList.pm

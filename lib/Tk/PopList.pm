@@ -21,13 +21,22 @@ Construct Tk::Widget 'PopList';
 =head1 SYNOPSIS
 
  require Tk::PopList;
- my $list= $window->PopList(@options,
+ my $list = $window->PopList(@options,
     -values => [qw/value1 value2 value3 value4/],
     -widget => $somewidget,
  );
  $list->popUp;
 
 =head1 DESCRIPTION
+
+This widget pops a listbox relative to the widget specified in the B<-widget> option.
+It aligns its size and position to the widget.
+
+You can specify B<-selectcall> to do something when you select an item. It gets the selected
+item as parameter.
+
+You can use the escape key to hide the list.
+You can use the return key to select an item.
 
 =head1 OPTIONS
 
@@ -37,7 +46,7 @@ Construct Tk::Widget 'PopList';
 
 Default value 0
 
-Specifies if a filter entry should be added. Practical for a long list of values.
+Specifies if a filter entry is added. Practical for a long list of values.
 
 =item B<-motionselect>
 
@@ -51,11 +60,7 @@ Callback, called when a list item is selected.
 
 =item B<-values>
 
-Mandatory!
-
 List of possible values.
-
-Only available at create time.
 
 =item B<-widget>
 
@@ -79,9 +84,6 @@ sub Populate {
 	my $motionselect = delete $args->{'-motionselect'};
 	$motionselect = 1 unless defined $motionselect;
 
-	my $values = delete $args->{'-values'};
-	die "You need to set the -values option" unless defined $values;
-
 	my $widget = delete $args->{'-widget'};
 	die 'You need to set the -widget option' unless defined $widget;
 
@@ -89,17 +91,15 @@ sub Populate {
 
 	$self->{FE} = undef;
 	$self->{LIST} = [];
-	$self->{VALUES} = $values;
+	$self->{POPDIRECTION} = '';
+	$self->{VALUES} = [];
 	$self->{WIDGET} = $widget;
 	
 	$self->overrideredirect(1);
 	$self->withdraw;
 
-	my $height = 10;
-	if (@$values < $height) { $height = @$values }
 	my $listbox = $self->Scrolled('Listbox',
 		-borderwidth => 1,
-# 		-height => $height,
 		-relief => 'sunken',
 		-scrollbars => 'oe',
 		-listvariable => $self->{LIST},
@@ -109,12 +109,43 @@ sub Populate {
 	$listbox->bind('<ButtonRelease-1>', [$self, 'Select', Ev('x'), Ev('y')]);
 	$listbox->bind('<Escape>', [$self, 'popDown']);
 	$self->bind('<Motion>', [$self, 'MotionSelect', Ev('x'), Ev('y')]) if $motionselect;
+	$self->parent->bind('<Button-1>', [$self, 'popDown']);
 
 	$self->ConfigSpecs(
 		-filter => ['PASSIVE', undef, undef, 0],
 		-selectcall => ['CALLBACK', undef, undef, sub {}],
+		'-values' => ['METHOD', undef, undef, []],
 		DEFAULT => [ $listbox ],
 	);
+}
+
+sub ConfigureSizeAndPos {
+	my $self = shift;
+	my $list = $self->{LIST};
+	my $lb = $self->Subwidget('Listbox');
+	my $widget = $self->{WIDGET};
+
+	my $screenheight = $self->vrootheight;
+	my $height = $lb->reqheight;
+	$height = $height + $self->{FE}->reqheight if defined $self->{FE};
+	my $width = $widget->width;
+
+	my $lheight = 10;
+	if (@$list < $lheight) { $lheight = @$list }
+	$lb->configure(-height => $lheight);
+
+	my $x = $widget->rootx;
+	my $origy = $widget->rooty;
+	my $y;
+
+	if ($origy + $height + $widget->height > $screenheight) {
+		$self->{POPDIRECTION} = 'up';
+		$y = $origy - $height;
+	} else {
+		$self->{POPDIRECTION} = 'down';
+		$y = $origy + $widget->height;
+	}
+	$self->geometry(sprintf('%dx%d+%d+%d', $width, $height, $x, $y));
 }
 
 =item B<filter>I<($filter)>
@@ -128,7 +159,7 @@ sub filter {
 	my $values = $self->{VALUES};
 	my @new = ();
 	for (@$values) {
-		push @new, $_ if $_ =~ /^$filter/;
+		push @new, $_ if $_ =~ /^$filter/i;
 	}
 	my $list = $self->{LIST};
 	@$list = @new;
@@ -154,12 +185,28 @@ sub popDown {
 	if (defined $e) {	
 		$e->packForget;
 		$e->destroy;
+		$self->{FE} = undef;
 	}
 	$self->withdraw;
-	$self->grabRelease;
+	$self->parent->grabRelease;
 	if (ref $self->{'_BE_grabinfo'} eq 'CODE') {
 		$self->{'_BE_grabinfo'}->();
 		delete $self->{'_BE_grabinfo'};
+	}
+}
+
+=item B<popFlip>
+
+Hides the PopList if it shown. Shows the PopList if it is hidden.
+
+=cut
+
+sub popFlip {
+	my $self = shift;
+	if ($self->ismapped) {
+		$self->popDown
+	} else {
+		$self->popUp
 	}
 }
 
@@ -181,13 +228,6 @@ sub popUp {
 	my $lb = $self->Subwidget('Listbox');
 	my $widget = $self->{WIDGET};
 
-	my $screenheight = $self->vrootheight;
-	my $height = $lb->reqheight;
-	my $width = $widget->width;
-	
-	my $x = $widget->rootx;
-	my $origy = $widget->rooty;
-
 	my $e;
 	if ($self->cget('-filter')) {
 		my $var = 'Filter';
@@ -204,33 +244,28 @@ sub popUp {
 				$self->filter($value);
 			},
 		);
-
-		$height = $height + $e->reqheight;
 		$self->{FE} = $e;
 	}
 
-	
-	my $y;
+	$self->ConfigureSizeAndPos;
+
 	my @filterpack = ();
-	if ($origy + $height + $widget->height > $screenheight) {
-		$y = $origy - $height;
+	if ($self->{POPDIRECTION} eq 'up') {
 		@filterpack = (-after => $lb);
-	} else {
-		$y = $origy + $widget->height;
+	} elsif ($self->{POPDIRECTION} eq 'down') {
 		@filterpack = (-before => $lb);
 	}
-
 	$e->pack(@filterpack,
 		-fill => 'x'
 	) if defined $e;
 
-	$self->geometry(sprintf('%dx%d+%d+%d', $width, $height, $x, $y));
 	$lb->selectionClear(0, 'end');
+	$lb->selectionSet('@0,0');
 	$self->deiconify;
 	$self->raise;
 	$lb->focus;
 	$self->{'_BE_grabinfo'} = $self->grabSave;
-	$self->grabGlobal;
+	$self->parent->grabGlobal;
 }
 
 sub Select {
@@ -243,7 +278,16 @@ sub Select {
 	$self->popDown;
 }
 
+sub values {
+	my ($self, $new) = @_;
+	$self->{VALUES} = $new if defined $new;
+	return $self->{VALUES}
+}
 =back
+
+=head1 LICENSE
+
+Same as Perl.
 
 =head1 AUTHOR
 
@@ -259,21 +303,13 @@ sub Select {
 
 Unknown. If you find any, please contact the author.
 
-=cut
-
-=head1 TODO
-
-=over 4
-
-
-=back
-
-=cut
-
 =head1 SEE ALSO
 
 =over 4
 
+=item L<Tk>
+=item L<Tk::Toplevel>
+=item L<Tk::Listbox>
 
 =back
 

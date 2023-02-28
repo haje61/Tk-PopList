@@ -20,7 +20,11 @@ if (defined $app) {
 		-command => sub  { $poplist->popUp },
 		-text => 'Color: ',
 	)->pack;
-	$poplist = $app->PopList(
+	my $frame = $app->Frame(
+		-width => 300,
+		-height => 200,
+	)->pack;
+	$poplist = $frame->PopList(
 		-filter => 1,
 		-motionselect => 1,
 		-values => \@values,

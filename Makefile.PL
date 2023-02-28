@@ -8,7 +8,7 @@ WriteMakefile(
 		'Test::Tk'							=> '2.02',
 	},
 	ABSTRACT_FROM		=> 'lib/Tk/PopList.pm',
-	AUTHOR				=> 'Hans Jeuken <hanje@cpan.org>',
+	AUTHOR				=> 'Hans Jeuken <hanje at cpan dot org>',
 	LICENSE				=> 'perl',
 
 	(eval { ExtUtils::MakeMaker->VERSION(6.46) } ? (META_MERGE => {
