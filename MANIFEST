@@ -1,7 +1,9 @@
 Changes
+lib/Tk/Poplevel.pm
 lib/Tk/PopList.pm
 LICENSE
 Makefile.PL
 MANIFEST
 README.md
+t/Tk-Poplevel.t
 t/Tk-PopList.t
