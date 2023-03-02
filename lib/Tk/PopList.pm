@@ -132,6 +132,7 @@ sub filter {
 	}
 	my $size = @new;
 	my $list = $self->{LIST};
+	#this is a hack. doing it the crude way somehow gives crashes
 	while (@$list) { pop @$list }
 	push @$list, @new;
 }
@@ -162,6 +163,7 @@ sub popUp {
 
 	my $values = $self->{VALUES};
 	my $list = $self->{LIST};
+	#this is a hack. doing it the crude way somehow gives crashes
 	while (@$list) { pop @$list }
 	push @$list, @$values;
 	
