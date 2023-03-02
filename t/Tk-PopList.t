@@ -25,6 +25,8 @@ if (defined $app) {
 		-height => 200,
 	)->pack;
 	$poplist = $frame->PopList(
+# 		-popdirection => 'down',
+		-confine => 1,
 		-filter => 1,
 		-motionselect => 1,
 		-values => \@values,

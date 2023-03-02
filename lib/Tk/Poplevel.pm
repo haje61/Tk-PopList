@@ -38,6 +38,25 @@ Accepts all the options of a Toplevel widget;
 
 =over 4
 
+=item B<-confine>
+
+Default value is 0.
+If set the popup will have the equal with of the widget.
+
+=item B<-popalign>
+
+Default value 'left'.
+Can be 'left' or 'right'.
+This is the preferred horizontal alignment.
+Does nothing when B<-confine> is set.
+
+=item B<-popdirection>
+
+Default value 'down'.
+Can be 'up' or 'down'.
+Specifies if the popup should be preferrably above or below the widget.
+Does nothing when B<-confine> is set.
+
 =item B<-widget>
 
 Mandatory!
@@ -67,10 +86,22 @@ sub Populate {
 	
 	$self->overrideredirect(1);
 	$self->withdraw;
-	$self->parent->bind('<Button-1>', [$self, 'popDown']);
+
+	my $parent = $self->parent;
+	my $bindsub = $parent->bind('<Button-1>');
+	if ($bindsub) {
+		$parent->bind('<Button-1>', sub {
+			$bindsub->Call;
+			$self->popDown;
+		});
+	} else {
+		$parent->bind('<Button-1>',  [$self, 'popDown'] );
+	}
+	
 	$self->ConfigSpecs(
-		-popdirection => ['PASSIVE', undef, undef, 'up'],
-		-confine => ['PASSIVE', undef, undef, 1],
+		-confine => ['PASSIVE', undef, undef, 0],
+		-popalign => ['PASSIVE', undef, undef, 'left'],
+		-popdirection => ['PASSIVE', undef, undef, 'down'],
 		DEFAULT => [ $self ],
 	);
 }
@@ -103,29 +134,47 @@ sub ConfigureSizeAndPos {
 	my $widget = $self->widget;
 	my $screenheight = $self->vrootheight;
 	my $screenwidth = $self->vrootwidth;
-	my $height = $self->calculateHeight;
 	my $confine = $self->cget('-confine');
+	my $preferred = $self->cget('-popdirection');
+	my $align = $self->cget('-popalign');
+
+	my $height = $self->calculateHeight;
+
 	my $width;
 	if ($confine) {
 		$width = $widget->width;
 	} else {
 		$width = $self->calculateWidth;
 	}
+
 	my $x = $widget->rootx;
 	unless ($confine) {
-		if ($x + $width > $screenwidth) {
+		my $flag;
+		if ($align eq 'left') {
+			$flag = ($x + $width > $screenwidth);
+		} else {
+			$flag = ($x + $widget->width - $width > 0)
+		}
+		if ($flag) {
 			$x = $x - ($width - $widget->width);
 		}
 	}
-	my $origy = $widget->rooty;
-	my $y;
 
-	if ($origy + $height + $widget->height > $screenheight) {
+	my $y = $widget->rooty;
+
+	my $flag;
+	if ($preferred eq 'up') {
+		$flag = ($y - $height > 0)
+	} else {
+		$flag = ($y + $height + $widget->height > $screenheight)
+	}
+	
+	if ($flag) {
 		$self->{POPDIRECTION} = 'up';
-		$y = $origy - $height;
+		$y = $y - $height;
 	} else {
 		$self->{POPDIRECTION} = 'down';
-		$y = $origy + $widget->height;
+		$y = $y + $widget->height;
 	}
 	$self->geometry(sprintf('%dx%d+%d+%d', $width, $height, $x, $y));
 }
