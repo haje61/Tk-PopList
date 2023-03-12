@@ -128,7 +128,7 @@ sub filter {
 	my @new = ();
 	my $len = length($filter);
 	for (@$values) {
-		push @new, $_ if $_ =~ /^$filter/i;
+		push @new, $_ if $_ =~ /$filter/i;
 	}
 	my $size = @new;
 	my $list = $self->{LIST};
