@@ -1,5 +1,8 @@
 Revision history for Perl extension Tk::PopList.
 
+0.13 Mon Mar 17 2025
+	- Fixed freeze on Windows systems.
+
 0.12 Mon Mar 17 2025
 	- Fixed bug in method NavDown.
 	- Fixed bug in method Select.

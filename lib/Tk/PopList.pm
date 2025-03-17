@@ -9,7 +9,7 @@ Tk::PopList - Popping a selection list relative to a widget
 use strict;
 use warnings;
 use vars qw($VERSION);
-$VERSION = '0.12';
+$VERSION = '0.13';
 
 use base qw(Tk::Derived Tk::Poplevel);
 
@@ -260,7 +260,7 @@ sub popUp {
 		$self->{FE} = $e;
 	}
 
-#	$self->calculateHeight;
+	$self->calculateHeight;
 	$self->SUPER::popUp;
 
 	my $lb = $self->Subwidget('List');
@@ -279,6 +279,8 @@ sub popUp {
 	$e->pack(@filterpack,
 		-fill => 'x'
 	) if defined $e;
+	$self->raise;
+	$self->update;
 }
 
 sub Select {
