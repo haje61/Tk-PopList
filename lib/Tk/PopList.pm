@@ -9,7 +9,7 @@ Tk::PopList - Popping a selection list relative to a widget
 use strict;
 use warnings;
 use vars qw($VERSION);
-$VERSION = '0.11';
+$VERSION = '0.12';
 
 use base qw(Tk::Derived Tk::Poplevel);
 
@@ -175,7 +175,6 @@ sub MotionSelect {
 
 sub NavDown {
 	my $self = shift;
-	return unless $self->cget('motionselect');
 	my $l = $self->Subwidget('List');
 	my ($sel) = $l->infoSelection;
 	my $val = $self->cget('-values');
@@ -266,6 +265,7 @@ sub popUp {
 
 	my $lb = $self->Subwidget('List');
 	$lb->selectionClear;
+	$lb->anchorClear;
 #	$lb->selectionSet(0) if $lb->infoExists(0);
 	$lb->focus unless $self->cget('-nofocus');
 
@@ -287,8 +287,10 @@ sub Select {
 	my $list = $self->Subwidget('List');
 
 	my ($item) = $list->infoSelection;
-	$item = $list->entrycget($item, '-text');
-	$self->Callback('-selectcall', $item);
+	if ((defined $item) and ($item ne '')) {
+		$item = $list->entrycget($item, '-text');
+		$self->Callback('-selectcall', $item);
+	}
 	$self->popDown;
 }
 
